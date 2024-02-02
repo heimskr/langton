@@ -1,6 +1,6 @@
 /langton
 *.png
-/langton.lz
+*.lz
 *.o
 core.*
 core

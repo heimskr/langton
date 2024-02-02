@@ -1,12 +1,7 @@
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
+#include "lodepng.h"
 #include "lz.h"
 #include "Grid.h"
 #include "Util.h"
-
-#include <stb/stb_image.h>
-#include <stb/stb_image_write.h>
 
 #include <charconv>
 #include <cstdint>
@@ -190,11 +185,21 @@ int main(int argc, char **argv) {
 
 	std::cerr << std::format("Writing {}x{} image ({:.2f} MiB) to {}\n", length, length, length * length * 4 / (1024. * 1024.), path.string());
 
-	const bool success = stbi_write_png(path.c_str(), length, length, 4, pixels.get(), length * 4);
+	std::vector<unsigned char> png;
+	std::cerr << "Compressing...\n";
+	unsigned error = lodepng::encode(png, pixels.get(), length, length);
 
-	if (success) {
-		std::cerr << std::format("Successfully wrote to {}\n", path.string());
-	} else {
-		std::cerr << std::format("Failed to write to {}\n", path.string());
+	if (error) {
+		std::cerr << std::format("Failed to compress and write to {}: {}\n", path.string(), error);
+		return 1;
 	}
+
+	std::cerr << "Writing PNG...\n";
+	error = lodepng::save_file(png, path);
+	if (error) {
+		std::cerr << std::format("Failed to write to {}: {}\n", path.string(), error);
+		return 1;
+	}
+
+	std::cerr << std::format("Successfully wrote to {}\n", path.string());
 }
