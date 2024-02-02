@@ -24,12 +24,12 @@ I parseNumber(std::string_view view, int base = 10) {
 	return out;
 }
 
-std::pair<int32_t, int32_t> getOffset(uint8_t direction) {
+inline void applyOffset(uint8_t direction, int32_t &x, int32_t &y) {
 	switch (direction) {
-		case 0: return { 0, -1};
-		case 1: return { 1,  0};
-		case 2: return { 0,  1};
-		case 3: return {-1,  0};
+		case 0: --y; return;
+		case 1: ++x; return;
+		case 2: ++y; return;
+		case 3: --x; return;
 		default:
 			std::cerr << std::format("Invalid direction: {}\n", int(direction));
 			std::terminate();
@@ -92,11 +92,11 @@ inline size_t getIndex(size_t size, std::pair<int32_t, int32_t> position) {
 	return size_t(position.second * size + position.first);
 }
 
-uint8_t rotateRight(uint8_t direction) {
+inline uint8_t rotateRight(uint8_t direction) {
 	return (direction + 1) % 4;
 }
 
-uint8_t rotateLeft(uint8_t direction) {
+inline uint8_t rotateLeft(uint8_t direction) {
 	if (direction-- == 0)
 		return 3;
 	return direction;
@@ -114,11 +114,11 @@ int main(int argc, char **argv) {
 
 	Grid grid(length);
 
-	std::pair<int32_t, int32_t> position{length / 2, length / 2};
+	int32_t x = length / 2;
+	int32_t y = length / 2;
 	uint8_t direction = 0;
 
 	for (size_t i = 0; i < steps; ++i) {
-		auto &[x, y] = position;
 		auto &color = grid(x, y);
 
 		if (color == 0 || color == 3) {
@@ -135,9 +135,7 @@ int main(int argc, char **argv) {
 			std::terminate();
 		}
 
-		auto [right, down] = getOffset(direction);
-		x += right;
-		y += down;
+		applyOffset(direction, x, y);
 	}
 
 	const auto size = grid.getSize();
