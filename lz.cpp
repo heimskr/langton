@@ -8,7 +8,7 @@
 
 #include <lz4.h>
 
-namespace Lz {
+namespace LZ4 {
 	namespace {
 		template <typename O, typename I>
 		O safeCast(I input) {

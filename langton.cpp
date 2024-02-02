@@ -3,16 +3,20 @@
 
 #include "lz.h"
 #include "Grid.h"
+#include "Util.h"
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
 
 #include <charconv>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <format>
 #include <iostream>
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -53,21 +57,65 @@ inline uint8_t rotateLeft(uint8_t direction) {
 	return direction;
 }
 
+std::vector<uint8_t> save(const Grid<uint8_t> &grid, int32_t x, int32_t y, uint8_t direction) {
+	std::vector<uint8_t> raw(grid.getSize() + 2 * sizeof(int32_t) + sizeof(direction));
+
+	const size_t grid_length = grid.getLength();
+	size_t offset = 0;
+
+	auto move = [&offset, &raw](const auto &item) {
+		std::memmove(raw.data() + offset, &item, sizeof(item));
+		offset += sizeof(item);
+	};
+
+	move(x);
+	move(y);
+	move(grid_length);
+	move(direction);
+	std::memmove(raw.data() + offset, grid.getData().data(), grid.getSize());
+	return LZ4::compress(raw);
+}
+
+void load(std::span<const uint8_t> compressed, Grid<uint8_t> &grid, int32_t &x, int32_t &y, uint8_t &direction) {
+	std::vector<uint8_t> raw = LZ4::decompress(compressed);
+
+	size_t grid_length{};
+	size_t offset = 0;
+
+	auto move = [&offset, &raw](auto &item) {
+		std::memmove(&item, raw.data() + offset, sizeof(item));
+		offset += sizeof(item);
+	};
+
+	move(x);
+	move(y);
+	move(grid_length);
+	move(direction);
+
+	grid = Grid<uint8_t>(grid_length);
+	std::memmove(grid.getData().data(), raw.data() + offset, grid_length * grid_length);
+}
+
 int main(int argc, char **argv) {
 	size_t steps = 1'000;
-	size_t length = 1;
 
 	if (2 <= argc)
 		steps = parseNumber<size_t>(argv[1]);
 
-	if (3 <= argc)
-		length = parseNumber<size_t>(argv[2]);
-
-	Grid<uint8_t> grid(length);
-
-	int32_t x = length / 2;
-	int32_t y = length / 2;
+	Grid<uint8_t> grid(1);
+	int32_t x = 0;
+	int32_t y = 0;
 	uint8_t direction = 0;
+
+	if (3 <= argc) {
+		if (std::filesystem::exists(argv[2])) {
+			std::string compressed = readFile(argv[2]);
+			std::span span(reinterpret_cast<const uint8_t *>(compressed.data()), compressed.size());
+			load(span, grid, x, y, direction);
+		} else {
+			std::cerr << std::format("Couldn't find checkpoint {}\n", argv[2]);
+		}
+	}
 
 	for (size_t i = 0; i < steps; ++i) {
 		auto &color = grid(x, y);
@@ -90,7 +138,7 @@ int main(int argc, char **argv) {
 	}
 
 	const auto size = grid.getSize();
-	length = grid.getLength();
+	const auto length = grid.getLength();
 
 	auto pixels = std::make_unique<uint8_t[]>(size * 4);
 
@@ -125,5 +173,17 @@ int main(int argc, char **argv) {
 		std::cerr << std::format("Successfully wrote to {}\n", path.string());
 	} else {
 		std::cerr << std::format("Failed to write to {}\n", path.string());
+	}
+
+	if (3 <= argc) {
+		std::vector<uint8_t> compressed = save(grid, x, y, direction);
+		std::ofstream ofs(argv[2]);
+		ofs.write(reinterpret_cast<const char *>(compressed.data()), compressed.size());
+
+		if (ofs) {
+			std::cerr << std::format("Saved checkpoint to {}\n", argv[2]);
+		} else {
+			std::cerr << std::format("Failed to save checkpoint to {}\n", argv[2]);
+		}
 	}
 }
