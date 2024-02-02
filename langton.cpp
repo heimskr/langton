@@ -173,16 +173,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::filesystem::path path{"langton.png"};
-
-	const bool success = stbi_write_png(path.c_str(), length, length, 4, pixels.get(), length * 4);
-
-	if (success) {
-		std::cerr << std::format("Successfully wrote to {}\n", path.string());
-	} else {
-		std::cerr << std::format("Failed to write to {}\n", path.string());
-	}
-
 	if (3 <= argc) {
 		std::vector<uint8_t> compressed = save(grid, x, y, direction, steps + previous_steps);
 		std::ofstream ofs(argv[2]);
@@ -193,5 +183,15 @@ int main(int argc, char **argv) {
 		} else {
 			std::cerr << std::format("Failed to save checkpoint to {}\n", argv[2]);
 		}
+	}
+
+	std::filesystem::path path{"langton.png"};
+
+	const bool success = stbi_write_png(path.c_str(), length, length, 4, pixels.get(), length * 4);
+
+	if (success) {
+		std::cerr << std::format("Successfully wrote to {}\n", path.string());
+	} else {
+		std::cerr << std::format("Failed to write to {}\n", path.string());
 	}
 }

@@ -2,3 +2,5 @@
 *.png
 /langton.lz
 *.o
+core.*
+core
