@@ -1,6 +1,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
+#include "lz.h"
+#include "Grid.h"
+
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
 
@@ -36,58 +39,6 @@ inline void applyOffset(uint8_t direction, int32_t &x, int32_t &y) {
 	}
 }
 
-class Grid {
-	private:
-		std::vector<uint8_t> data;
-		size_t length;
-
-	public:
-		Grid(size_t length_):
-			data(length_ * length_),
-			length(length_) {}
-
-		void expand(int32_t &x, int32_t &y) {
-			std::vector<uint8_t> new_data(length * length * 4);
-			size_t offset = length / 2;
-
-			for (size_t row = 0; row < length; ++row) {
-				for (size_t col = 0; col < length; ++col) {
-					new_data[(row + offset) * (length * 2) + (col + offset)] = data[row * length + col];
-				}
-			}
-
-			data = std::move(new_data);
-
-			x += int32_t(offset);
-			y += int32_t(offset);
-
-			length *= 2;
-		}
-
-		uint8_t & operator()(int32_t &x, int32_t &y) {
-			if (x < 0 || y < 0)
-				expand(x, y);
-
-			while (length <= size_t(x) || length <= size_t(y))
-				expand(x, y);
-
-			return data[size_t(y) * length + x];
-		}
-
-		inline uint8_t & operator()(std::pair<int32_t, int32_t> pair) {
-			return (*this)(pair.first, pair.second);
-		}
-
-		inline auto getLength() const { return length; }
-		inline auto getSize() const { return data.size(); }
-		inline const auto & getData() const { return data; }
-		inline auto & getData() { return data; }
-		inline auto begin() { return data.begin(); }
-		inline auto end() { return data.end(); }
-		inline auto begin() const { return data.begin(); }
-		inline auto end() const { return data.end(); }
-};
-
 inline size_t getIndex(size_t size, std::pair<int32_t, int32_t> position) {
 	return size_t(position.second * size + position.first);
 }
@@ -112,7 +63,7 @@ int main(int argc, char **argv) {
 	if (3 <= argc)
 		length = parseNumber<size_t>(argv[2]);
 
-	Grid grid(length);
+	Grid<uint8_t> grid(length);
 
 	int32_t x = length / 2;
 	int32_t y = length / 2;

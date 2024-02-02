@@ -1,2 +1,4 @@
 /langton
-/*.png
+*.png
+/langton.lz
+*.o
