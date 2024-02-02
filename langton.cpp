@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
 	if (3 <= argc) {
 		std::vector<uint8_t> compressed = save(grid, x, y, direction, steps + previous_steps);
 		std::ofstream ofs(argv[2]);
+		std::cerr << "Saving checkpoint...\n";
 		ofs.write(reinterpret_cast<const char *>(compressed.data()), compressed.size());
 
 		if (ofs) {
@@ -186,6 +187,8 @@ int main(int argc, char **argv) {
 	}
 
 	std::filesystem::path path{"langton.png"};
+
+	std::cerr << std::format("Writing {}x{} image ({:.2f} MiB) to {}\n", length, length, length * length * 4 / (1024. * 1024.), path.string());
 
 	const bool success = stbi_write_png(path.c_str(), length, length, 4, pixels.get(), length * 4);
 
