@@ -42,14 +42,6 @@ inline size_t getIndex(size_t size, std::pair<int32_t, int32_t> position) {
 	return size_t(position.second * size + position.first);
 }
 
-inline uint8_t rotateRight(uint8_t direction) {
-	return (direction + 1) % 4;
-}
-
-inline uint8_t rotateLeft(uint8_t direction) {
-	return (direction + 3) % 4;
-}
-
 std::vector<uint8_t> save(const Grid<uint8_t> &grid, int32_t x, int32_t y, uint8_t direction, size_t steps) {
 	const size_t grid_length = grid.getLength();
 
@@ -120,21 +112,8 @@ int main(int argc, char **argv) {
 
 	for (size_t i = 0; i < steps; ++i) {
 		auto &color = grid(x, y);
-
-		if (color == 0 || color == 3) {
-			color = 1;
-			direction = rotateRight(direction);
-		} else if (color == 1) {
-			color = 2;
-			direction = rotateLeft(direction);
-		} else if (color == 2) {
-			color = 3;
-			direction = rotateRight(direction);
-		} else {
-			std::cerr << std::format("Invalid color: {}\n", int(color));
-			std::terminate();
-		}
-
+		direction = (direction + 1 + ((color == 1) << 1)) & 3;
+		color = color + 1 - (color == 3) * 3;
 		applyOffset(direction, x, y);
 	}
 
