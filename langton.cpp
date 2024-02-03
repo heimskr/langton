@@ -47,9 +47,7 @@ inline uint8_t rotateRight(uint8_t direction) {
 }
 
 inline uint8_t rotateLeft(uint8_t direction) {
-	if (direction-- == 0)
-		return 3;
-	return direction;
+	return (direction + 3) % 4;
 }
 
 std::vector<uint8_t> save(const Grid<uint8_t> &grid, int32_t x, int32_t y, uint8_t direction, size_t steps) {
