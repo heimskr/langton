@@ -1,11 +1,12 @@
 SOURCES := $(shell find . -name '*.cpp')
 OBJECTS := $(SOURCES:.cpp=.o)
+CXX ?= g++
 
 %.o: %.cpp
-	g++ -flto -g -Ofast -march=native -fno-exceptions -std=c++23 -Wall -Wextra -c $< -o $@
+	$(CXX) -flto -g -Ofast -march=native -fno-exceptions -std=c++20 -Wall -Wextra -c $< -o $@
 
 langton: $(OBJECTS)
-	g++ -flto $^ -o $@ -llz4
+	$(CXX) -flto $^ -o $@ -llz4
 
 clean:
 	rm -f langton $(OBJECTS)
