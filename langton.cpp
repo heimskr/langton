@@ -2,6 +2,7 @@
 #include "lz.h"
 #include "Grid.h"
 #include "Util.h"
+#include "Zstd.h"
 
 #include <charconv>
 #include <cstdint>
@@ -60,15 +61,15 @@ std::vector<uint8_t> save(const Grid<uint8_t> &grid, int32_t x, int32_t y, uint8
 	move(direction);
 	move(steps);
 	std::memmove(raw.data() + offset, grid.getData().data(), grid.getSize());
-	return LZ4::compress(raw);
+	return Zstd::compress(raw);
 }
 
 size_t load(std::span<const uint8_t> compressed, Grid<uint8_t> &grid, int32_t &x, int32_t &y, uint8_t &direction) {
-	std::vector<uint8_t> raw = LZ4::decompress(compressed);
+	std::vector<uint8_t> raw = Zstd::decompress(compressed);
 
 	size_t grid_length{};
 	size_t offset = 0;
-	size_t steps;
+	size_t steps{};
 
 	auto move = [&offset, &raw](auto &item) {
 		std::memmove(&item, raw.data() + offset, sizeof(item));
@@ -87,40 +88,8 @@ size_t load(std::span<const uint8_t> compressed, Grid<uint8_t> &grid, int32_t &x
 	return steps;
 }
 
-int main(int argc, char **argv) {
-	size_t steps = 1'000;
-
-	if (2 <= argc)
-		steps = parseNumber<size_t>(argv[1]);
-
-	Grid<uint8_t> grid(1);
-	int32_t x = 0;
-	int32_t y = 0;
-	uint8_t direction = 0;
-	size_t previous_steps = 0;
-
-	if (3 <= argc) {
-		if (std::filesystem::exists(argv[2])) {
-			std::string compressed = readFile(argv[2]);
-			std::span span(reinterpret_cast<const uint8_t *>(compressed.data()), compressed.size());
-			previous_steps = load(span, grid, x, y, direction);
-			std::cerr << std::format("Loaded {} step{} from {}\n", previous_steps, previous_steps == 1? "" : "s", argv[2]);
-		} else {
-			std::cerr << std::format("Couldn't find checkpoint {}\n", argv[2]);
-		}
-	}
-
-	for (size_t i = 0; i < steps; ++i) {
-		auto &color = grid(x, y);
-		direction = (direction + 1 + ((color == 1) << 1)) & 3;
-		color = color + 1 - (color == 3) * 3;
-		applyOffset(direction, x, y);
-	}
-
-	const auto size = grid.getSize();
-	const auto length = grid.getLength();
-
-	auto pixels = std::make_unique<uint8_t[]>(size * 4);
+std::unique_ptr<uint8_t[]> makeImage(const Grid<uint8_t> &grid) {
+	auto pixels = std::make_unique<uint8_t[]>(grid.getSize() * 4);
 
 	size_t i = 0;
 
@@ -145,10 +114,47 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	return pixels;
+}
+
+int main(int argc, char **argv) {
+	size_t steps = 1'000;
+
+	if (2 <= argc)
+		steps = parseNumber<size_t>(argv[1]);
+
+	Grid<uint8_t> grid(1);
+	int32_t x = 0;
+	int32_t y = 0;
+	uint8_t direction = 0;
+	size_t previous_steps = 0;
+
 	if (3 <= argc) {
+		if (std::filesystem::exists(argv[2])) {
+			std::cerr << std::format("Loading steps from {}.\n", argv[2]);
+			std::string compressed = readFile(argv[2]);
+			std::span span(reinterpret_cast<const uint8_t *>(compressed.data()), compressed.size());
+			previous_steps = load(span, grid, x, y, direction);
+			std::cerr << std::format("Loaded {} step{}.\n", previous_steps, previous_steps == 1? "" : "s");
+		} else {
+			std::cerr << std::format("Couldn't find checkpoint {}.\n", argv[2]);
+		}
+	}
+
+	std::cerr << std::format("Processing {} step{}.\n", steps, steps == 1? "" : "s");
+
+	for (size_t i = 0; i < steps; ++i) {
+		auto &color = grid(x, y);
+		direction = (direction + 1 + ((color == 1) << 1)) & 3;
+		color = color + 1 - (color == 3) * 3;
+		applyOffset(direction, x, y);
+	}
+
+	if (3 <= argc) {
+		std::cerr << "Compressing checkpoint.\n";
 		std::vector<uint8_t> compressed = save(grid, x, y, direction, steps + previous_steps);
 		std::ofstream ofs(argv[2]);
-		std::cerr << "Saving checkpoint...\n";
+		std::cerr << "Saving checkpoint.\n";
 		ofs.write(reinterpret_cast<const char *>(compressed.data()), compressed.size());
 
 		if (ofs) {
@@ -158,12 +164,16 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	std::cerr << "Producing raw image.\n";
+	auto pixels = makeImage(grid);
+
 	std::filesystem::path path{"langton.png"};
+	const auto length = grid.getLength();
 
 	std::cerr << std::format("Writing {}x{} image ({:.2f} MiB) to {}\n", length, length, length * length * 4 / (1024. * 1024.), path.string());
 
 	std::vector<unsigned char> png;
-	std::cerr << "Compressing...\n";
+	std::cerr << "Compressing PNG.\n";
 	unsigned error = lodepng::encode(png, pixels.get(), length, length);
 
 	if (error) {
@@ -171,7 +181,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	std::cerr << "Writing PNG...\n";
+	std::cerr << "Writing PNG.\n";
 	error = lodepng::save_file(png, path);
 	if (error) {
 		std::cerr << std::format("Failed to write to {}: {}\n", path.string(), error);

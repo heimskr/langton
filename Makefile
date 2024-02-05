@@ -6,7 +6,7 @@ CXX ?= g++
 	$(CXX) -flto -g -Ofast -march=native -fno-exceptions -std=c++20 -Wall -Wextra -c $< -o $@
 
 langton: $(OBJECTS)
-	$(CXX) -flto $^ -o $@ -llz4
+	$(CXX) -flto $^ -o $@ -llz4 -lzstd
 
 clean:
 	rm -f langton $(OBJECTS)
