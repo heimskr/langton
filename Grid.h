@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-template <typename T>
+template <typename T, typename C>
 class Grid {
 	private:
 		std::vector<T> data;
@@ -14,7 +14,7 @@ class Grid {
 			data(length_ * length_),
 			length(length_) {}
 
-		void expand(int32_t &x, int32_t &y) {
+		void expand(C &x, C &y) {
 			std::vector<T> new_data(length * length * 4);
 			size_t offset = length / 2;
 
@@ -26,13 +26,13 @@ class Grid {
 
 			data = std::move(new_data);
 
-			x += int32_t(offset);
-			y += int32_t(offset);
+			x += C(offset);
+			y += C(offset);
 
 			length *= 2;
 		}
 
-		auto & operator()(int32_t &x, int32_t &y) {
+		auto & operator()(C &x, C &y) {
 			if (x < 0 || y < 0)
 				expand(x, y);
 
