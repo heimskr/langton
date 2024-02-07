@@ -1,5 +1,4 @@
 #include "lodepng.h"
-#include "lz.h"
 #include "Grid.h"
 #include "Util.h"
 #include "Zstd.h"

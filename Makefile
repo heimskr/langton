@@ -7,7 +7,7 @@ PKG_INCLUDES := $(shell pkg-config --cflags libzstd)
 	$(CXX) $(strip -flto -g -Ofast -march=native -fno-exceptions -std=c++20 -Wall -Wextra $(PKG_INCLUDES)) -c $< -o $@
 
 langton: $(OBJECTS)
-	$(CXX) -flto $^ -o $@ -llz4 -lzstd
+	$(CXX) -flto $^ -o $@ $(shell pkg-config --libs libzstd)
 
 clean:
 	rm -f langton $(OBJECTS)
