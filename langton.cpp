@@ -17,23 +17,6 @@
 
 using Coord = int32_t;
 
-template <typename O, typename I>
-O safeCast(I input) {
-	if (static_cast<I>(std::numeric_limits<O>::max()) < input) {
-		std::cerr << std::format("Input number too high: {} > {}\n", input, static_cast<I>(std::numeric_limits<O>::max()));
-		std::terminate();
-	}
-
-	if constexpr (std::is_signed_v<I> && std::is_signed_v<O>) {
-		if (static_cast<I>(std::numeric_limits<O>::min()) > input) {
-			std::cerr << "Input number too low\n";
-			std::terminate();
-		}
-	}
-
-	return static_cast<O>(input);
-}
-
 template <std::integral I>
 I parseNumber(std::string_view view, int base = 10) {
 	I out{};
