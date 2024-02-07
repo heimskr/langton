@@ -1,9 +1,10 @@
-SOURCES := $(shell find . -name '*.cpp')
-OBJECTS := $(SOURCES:.cpp=.o)
-CXX ?= g++
+SOURCES      := $(shell find . -name '*.cpp')
+OBJECTS      := $(SOURCES:.cpp=.o)
+CXX          ?= g++
+PKG_INCLUDES := $(shell pkg-config --cflags libzstd)
 
 %.o: %.cpp
-	$(CXX) -flto -g -Ofast -march=native -fno-exceptions -std=c++20 -Wall -Wextra -c $< -o $@
+	$(CXX) $(strip -flto -g -Ofast -march=native -fno-exceptions -std=c++20 -Wall -Wextra $(PKG_INCLUDES)) -c $< -o $@
 
 langton: $(OBJECTS)
 	$(CXX) -flto $^ -o $@ -llz4 -lzstd
